@@ -1,3 +1,9 @@
+import EventDispatcher from "../../@shared/event/event-dispatcher";
+import CustomerChangedAddressEvent from "../event/customer-changed-address.event";
+import CustomerCreatedEvent from "../event/customer-created.event";
+import EnviaConsoleLog1Handler from "../event/handler/envia-console-log-1.handler";
+import EnviaConsoleLog2Handler from "../event/handler/envia-console-log-2.handler";
+import EnviaConsoleLogHandler from "../event/handler/envia-console-log.handler";
 import Address from "../value-object/address";
 
 export default class Customer {
@@ -6,11 +12,15 @@ export default class Customer {
   private _address!: Address;
   private _active: boolean = false;
   private _rewardPoints: number = 0;
+  private eventDispatcher: EventDispatcher;
 
   constructor(id: string, name: string) {
     this._id = id;
     this._name = name;
+    this.eventDispatcher = new EventDispatcher();
     this.validate();
+    this.registerEventHandlers();
+    this.handleCreatedCustomer();
   }
 
   get id(): string {
@@ -23,6 +33,27 @@ export default class Customer {
 
   get rewardPoints(): number {
     return this._rewardPoints;
+  }
+
+  private registerEventHandlers() {
+    const event1Handler = new EnviaConsoleLog1Handler();
+    const event2Handler = new EnviaConsoleLog2Handler();
+    this.eventDispatcher.register("CustomerCreatedEvent", event1Handler);
+    this.eventDispatcher.register("CustomerCreatedEvent", event2Handler);
+
+    const eventHandler = new EnviaConsoleLogHandler();
+    this.eventDispatcher.register("CustomerChangedAddressEvent", eventHandler);
+  }
+
+  private handleCreatedCustomer() {
+    const customerCreatedEvent = new CustomerCreatedEvent(this);
+    this.eventDispatcher.notify(customerCreatedEvent);
+  }
+
+  private handleChangedAddress() {
+    if (!this._address) return;
+    const customerChangedAddressEvent = new CustomerChangedAddressEvent(this);
+    this.eventDispatcher.notify(customerChangedAddressEvent);
   }
 
   validate() {
@@ -45,6 +76,8 @@ export default class Customer {
 
   changeAddress(address: Address) {
     this._address = address;
+
+    this.handleChangedAddress();
   }
 
   isActive(): boolean {
